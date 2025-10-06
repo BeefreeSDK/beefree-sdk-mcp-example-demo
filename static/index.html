@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beefree SDK + PydanticAI Showcase</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="main-content">
+            <!-- Left Panel: Chat Interface -->
+            <div class="chat-panel">
+                <div class="chat-container">
+                    <div id="chat-messages" class="chat-messages">
+                        <div id="empty-state" class="empty-state">
+                            <div class="empty-state-content">
+                                <h3>Welcome to your AI Email Designer</h3>
+                                <p>I can help you create stunning email designs with natural language commands.</p>
+
+                                <div class="example-prompts">
+                                    <div class="prompt-grid">
+                                        <button class="prompt-card" data-prompt="Create a welcome email with a hero section, company introduction, and sign-up CTA">
+                                            <span class="prompt-text">Create welcome email</span>
+                                        </button>
+                                        <button class="prompt-card" data-prompt="Build a newsletter layout with header, featured article, and 3-column content grid">
+                                            <span class="prompt-text">Build newsletter layout</span>
+                                        </button>
+                                        <button class="prompt-card" data-prompt="Design a promotional email with product showcase, discount code, and urgency messaging">
+                                            <span class="prompt-text">Design promotional campaign</span>
+                                        </button>
+                                        <button id="product-launch-btn" class="prompt-card" data-prompt="Create a professional product launch email for our new AI-powered design tool. Include a hero section with the product image, feature highlights in a 3-column layout, customer testimonials, pricing tiers, and a strong CTA. Use #2563EB as primary color and #1E293B for text. Add social proof badges and ensure mobile optimization.">
+                                            <span class="prompt-text">Try product launch template →</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chat-input-container">
+                        <textarea
+                            id="chat-input"
+                            class="chat-input"
+                            placeholder="Type your message here..."
+                            rows="3"
+                        ></textarea>
+                        <button id="send-btn" class="btn-primary">Send</button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Panel: Beefree Editor -->
+            <div class="editor-panel">
+                <!-- This is the container for the Beefree plugin -->
+                <div id="bee-plugin-container" style="width: 100%; height: 100%; min-height: 600px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Beefree SDK -->
+    <script src="https://app-rsrc.getbee.io/plugin/v2/BeePlugin.js"></script>
+
+    <!-- Application JavaScript -->
+    <script src="/static/app.js"></script>
+</body>
+</html>
