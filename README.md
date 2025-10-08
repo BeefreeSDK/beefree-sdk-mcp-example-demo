@@ -76,7 +76,7 @@ The application will be available at `http://localhost:8000`
 - [Beefree SDK Documentation](https://docs.beefree.io/)  
 - Beefree SDK MCP Server Documentation
 
-**About PedanticAI:**
+**About PydanticAI:**
 
 - [PydanticAI Documentation](https://ai.pydantic.dev/)  
 - [PydanticAI MCP Integration](https://ai.pydantic.dev/mcp/)
