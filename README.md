@@ -1,27 +1,32 @@
-# Beefree SDK + PydanticAI MCP Showcase
+# Email Creation with AI Agents | Beefree SDK + PydanticAI MCP Showcase
 
-A demonstration application showcasing the integration of Beefree SDK's drag-and-drop email editor with PydanticAI agents using the Model Context Protocol (MCP).
+Are you exploring agentic email design? We believe the future of content design means having AI agents and humans work seamlessly together to create content — and this simple demo app shows you how to create a design experience that does just that. 
 
-## Features
+It connects the [Beefree SDK](https://developers.beefree.io/) (the most intuitive drag-and-drop email editor in the market) with a [PydanticAI agent](https://ai.pydantic.dev/) using the Model Context Protocol (MCP). 
 
-- **AI-Powered Email Design**: Use natural language to create and modify email templates
-- **Drag-and-Drop Editor**: Full Beefree SDK email editor integration
-- **Real-time Streaming**: WebSocket-based streaming chat interface
-- **MCP Integration**: Direct connection to Beefree's Streamble HTTP MCP server
-- **Modern Tooling**: Built with uv for fast dependency management
+**Here's what you can achieve:** 
+
+- **AI-Powered Email Design**: Use natural language to create and modify email templates  
+- **WYSIWYG Editor**: Allow humans to easily edit drafts created by AI in the intuitive, drag-and-drop editor provided by the Beefree SDK
+
+**What powers this experience:** 
+
+* **Real-time Streaming:** WebSocket-based streaming chat interface  
+* **MCP Integration:** Direct connection to Beefree's Streamble HTTP MCP Server.  
+* **Modern Tooling**: Built with uv for fast dependency management
 
 ## Prerequisites
 
-- Python 3.13+
-- [uv](https://docs.astral.sh/uv/) for package management (recommended)
-- Beefree SDK account ([Get credentials here](https://developers.beefree.io/))
+- Python 3.13+  
+- [uv](https://docs.astral.sh/uv/) for package management (recommended)  
+- Beefree SDK account (If you already have an account, you can [get your credentials here](https://developers.beefree.io/). If you're new to Beefree SDK, you can [sign up for a free account](https://developers.beefree.io/signup).)  
 - OpenAI API key
 
-## Quick Start
+## Quick start
 
-### 1. Clone and Install
+### 1. Clone and install
 
-```bash
+```shell
 # Clone the repository
 git clone <repository-url>
 cd beefree_mcp_example
@@ -30,44 +35,53 @@ cd beefree_mcp_example
 uv sync
 ```
 
-### 2. Configure Environment
+### 2. Configure environment
 
 Copy the example environment file and add your credentials:
 
-```bash
+```shell
 cp .env.example .env
 ```
 
 Edit `.env` with your credentials:
 
-```env
+```
 BEEFREE_CLIENT_ID=your_beefree_client_id
 BEEFREE_CLIENT_SECRET=your_beefree_client_secret
 BEEFREE_MCP_API_KEY=your_beefree_mcp_api_key
 OPENAI_API_KEY=your_llm_api_key
 ```
 
-### 3. Run the Application
+### 3. Run the application
 
-```bash
+```shell
 # With uv
 uv run python main.py
 ```
 
 The application will be available at `http://localhost:8000`
 
-## How It Works
+## How it works
 
-1. **User Input**: User types a natural language request in the chat interface
-2. **Streaming Processing**: PydanticAI agent processes using `agent.run_stream()`
-3. **MCP Execution**: Direct HTTP calls to Beefree's MCP server modify the email template
-4. **Real-time Updates**: Streaming responses show the AI's thought process
-5. **Editor Integration**: Changes are reflected in the Beefree editor
+1. **User Input**: The user types a natural language request in the chat interface, such as a detailed description of the type of email campaign they'd like to draft.  
+2. **Streaming Processing**: PydanticAI agent processes using `agent.run_stream()`  
+3. **MCP Execution**: Direct HTTP calls to Beefree's MCP server modify the email template.  
+4. **Real-time Updates**: Streaming responses show the AI's thought process.  
+5. **Editor Integration**: Changes are reflected in the Beefree editor.
 
 ## Resources
 
-- [Beefree SDK Documentation](https://docs.beefree.io/)
-- [PydanticAI Documentation](https://ai.pydantic.dev/)
+**About the Beefree SDK**
+
+- [Beefree SDK Documentation](https://docs.beefree.io/)  
+- Beefree SDK MCP Server Documentation
+
+**About PydanticAI:**
+
+- [PydanticAI Documentation](https://ai.pydantic.dev/)  
 - [PydanticAI MCP Integration](https://ai.pydantic.dev/mcp/)
-- [Model Context Protocol](https://modelcontextprotocol.io/)
+
+**More resources:**
+
+- What's a [Model Context Protocol](https://modelcontextprotocol.io/)?  
 - [uv Documentation](https://docs.astral.sh/uv/)
