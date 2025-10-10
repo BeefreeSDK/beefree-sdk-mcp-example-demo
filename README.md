@@ -21,6 +21,7 @@ It connects the [Beefree SDK](https://developers.beefree.io/) (the most intuitiv
 - [uv](https://docs.astral.sh/uv/) for package management (recommended)  
 - Beefree SDK account (If you already have an account, you can [get your credentials here](https://developers.beefree.io/). If you're new to Beefree SDK, you can [sign up for a free account](https://developers.beefree.io/signup).)  
 - OpenAI API key
+- Beta access. Learn how to request access to the beta in our [Beefree SDK MCP Server (Beta) documentation](https://docs.beefree.io/beefree-sdk/early-access/beefree-sdk-mcp-server-beta).
 
 ## Quick start
 
