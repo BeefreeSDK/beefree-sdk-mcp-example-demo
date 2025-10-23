@@ -188,6 +188,11 @@ class BeefreeEmailApp {
             this.sendMessage();
         });
 
+        // Stop button
+        document.getElementById('stop-btn').addEventListener('click', () => {
+            this.stopGeneration();
+        });
+
         // Enter key in textarea
         document.getElementById('chat-input').addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -204,6 +209,68 @@ class BeefreeEmailApp {
                 this.sendPrompt(prompt);
             }
         });
+
+        // Figma modal controls
+        const modal = document.getElementById('figma-modal');
+        const openModalBtn = document.getElementById('open-figma-modal-btn');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const cancelBtn = document.getElementById('cancel-figma-btn');
+        const importBtn = document.getElementById('import-figma-modal-btn');
+
+        // Open modal
+        if (openModalBtn) {
+            openModalBtn.addEventListener('click', () => {
+                modal.style.display = 'flex';
+            });
+        }
+
+        // Close modal functions
+        const closeModal = () => {
+            modal.style.display = 'none';
+            document.getElementById('figma-url-modal').value = '';
+        };
+
+        if (closeModalBtn) {
+            closeModalBtn.addEventListener('click', closeModal);
+        }
+
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', closeModal);
+        }
+
+        // Close modal when clicking outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        // Import from Figma
+        if (importBtn) {
+            importBtn.addEventListener('click', () => {
+                const figmaUrl = document.getElementById('figma-url-modal').value.trim();
+                
+                if (!figmaUrl) {
+                    this.showError('Please enter a Figma URL');
+                    return;
+                }
+
+                if (!figmaUrl.includes('figma.com/file/') && !figmaUrl.includes('figma.com/design/')) {
+                    this.showError('Invalid Figma URL. Expected format: https://www.figma.com/file/... or https://www.figma.com/design/...');
+                    return;
+                }
+
+                // Close modal
+                closeModal();
+
+                // Hide empty state
+                this.hideEmptyState();
+
+                // Send Figma import request
+                const message = `Please import and recreate the design from this Figma file: ${figmaUrl}`;
+                this.sendPrompt(message);
+            });
+        }
     }
 
     sendMessage() {
@@ -236,6 +303,7 @@ class BeefreeEmailApp {
         this.isGenerating = generating;
         const input = document.getElementById('chat-input');
         const sendBtn = document.getElementById('send-btn');
+        const stopBtn = document.getElementById('stop-btn');
 
         if (generating) {
             // Disable input and show loading state
@@ -250,13 +318,38 @@ class BeefreeEmailApp {
                 </svg>
             `;
             sendBtn.disabled = true;
+            stopBtn.style.display = 'block';
         } else {
             // Re-enable input and restore send button
             input.disabled = false;
             input.placeholder = 'Type your message here...';
             sendBtn.innerHTML = 'Send';
             sendBtn.disabled = false;
+            stopBtn.style.display = 'none';
         }
+    }
+
+    stopGeneration() {
+        if (!this.isGenerating) return;
+
+        // Send stop signal via WebSocket
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                type: 'stop'
+            }));
+        }
+
+        // Reset state
+        if (this.currentMessageId) {
+            this.finalizeMessage(this.currentMessageId);
+        }
+        this.currentMessageId = null;
+        this.isFirstStreamChunk = false;
+        this.previousContentLength = 0;
+        this.setGeneratingState(false);
+
+        // Show notification
+        this.addMessage('system', '⚠️ Generation stopped by user', 'warning');
     }
 
     sendPrompt(prompt) {

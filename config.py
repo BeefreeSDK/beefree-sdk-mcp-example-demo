@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     )
     beefree_mcp_api_key: str = Field(description="api key for mcp service")
 
+    # Figma Configuration
+    figma_token: str = Field(description="Figma API access token")
+
     llm_model: str = Field(default="gpt-5-mini", description="Model to use")
     openai_api_key: str
 

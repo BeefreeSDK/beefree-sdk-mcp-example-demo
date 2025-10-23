@@ -18,6 +18,16 @@
                                 <h3>Welcome to your AI Email Designer</h3>
                                 <p>I can help you create stunning email designs with natural language commands.</p>
 
+                                <!-- Figma Integration Button -->
+                                <div class="figma-integration-section">
+                                    <button id="open-figma-modal-btn" class="btn-figma-large">
+                                        🎨 Import from Figma
+                                    </button>
+                                    <p style="font-size: 0.85em; color: #666; margin-top: 8px;">
+                                        Recreate your Figma designs as email templates
+                                    </p>
+                                </div>
+
                                 <div class="example-prompts">
                                     <div class="prompt-grid">
                                         <button class="prompt-card" data-prompt="Create a welcome email with a hero section, company introduction, and sign-up CTA">
@@ -45,7 +55,10 @@
                             placeholder="Type your message here..."
                             rows="3"
                         ></textarea>
-                        <button id="send-btn" class="btn-primary">Send</button>
+                        <div class="button-group">
+                            <button id="send-btn" class="btn-primary">Send</button>
+                            <button id="stop-btn" class="btn-danger" style="display: none;">Stop</button>
+                        </div>
                     </div>
                 </div>
 
@@ -55,6 +68,35 @@
             <div class="editor-panel">
                 <!-- This is the container for the Beefree plugin -->
                 <div id="bee-plugin-container" style="width: 100%; height: 100%; min-height: 600px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Figma Import Modal -->
+    <div id="figma-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Import from Figma</h2>
+                <button class="modal-close" id="close-modal-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-description">
+                    Enter your Figma file URL to import and recreate the design as an email template.
+                </p>
+                <div class="form-group">
+                    <label for="figma-url-modal">Figma File URL</label>
+                    <input 
+                        type="text" 
+                        id="figma-url-modal" 
+                        placeholder="https://www.figma.com/design/... or /file/..."
+                        class="modal-input"
+                    />
+                    <p class="input-hint">Example: https://www.figma.com/design/ABC123/My-Design</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancel-figma-btn" class="btn-secondary">Cancel</button>
+                <button id="import-figma-modal-btn" class="btn-primary">Import Design</button>
             </div>
         </div>
     </div>
