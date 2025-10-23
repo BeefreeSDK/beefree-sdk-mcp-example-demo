@@ -7,6 +7,7 @@ class BeefreeEmailApp {
         this.isFirstStreamChunk = false;
         this.previousContentLength = 0;
         this.isGenerating = false;
+        this.currentFigmaHtml = null;
         this.init();
     }
 
@@ -221,13 +222,15 @@ class BeefreeEmailApp {
         if (openModalBtn) {
             openModalBtn.addEventListener('click', () => {
                 modal.style.display = 'flex';
+                // Reset modal state
+                this.resetFigmaModal();
             });
         }
 
         // Close modal functions
         const closeModal = () => {
             modal.style.display = 'none';
-            document.getElementById('figma-url-modal').value = '';
+            this.resetFigmaModal();
         };
 
         if (closeModalBtn) {
@@ -244,6 +247,32 @@ class BeefreeEmailApp {
                 closeModal();
             }
         });
+
+        // Preview Figma HTML
+        const previewBtn = document.getElementById('preview-figma-btn');
+        if (previewBtn) {
+            previewBtn.addEventListener('click', async () => {
+                const figmaUrl = document.getElementById('figma-url-modal').value.trim();
+                
+                if (!figmaUrl) {
+                    this.showError('Please enter a Figma URL');
+                    return;
+                }
+
+                if (!figmaUrl.includes('figma.com/file/') && !figmaUrl.includes('figma.com/design/')) {
+                    this.showError('Invalid Figma URL. Expected format: https://www.figma.com/file/... or https://www.figma.com/design/...');
+                    return;
+                }
+
+                await this.previewFigmaHtml(figmaUrl);
+            });
+        }
+
+        // Copy HTML button
+        const copyHtmlBtn = document.getElementById('copy-html-btn');
+        if (copyHtmlBtn) {
+            copyHtmlBtn.addEventListener('click', () => this.copyHtmlToClipboard());
+        }
 
         // Import from Figma
         if (importBtn) {
@@ -266,10 +295,195 @@ class BeefreeEmailApp {
                 // Hide empty state
                 this.hideEmptyState();
 
+                // Add system message indicating fresh import
+                this.addMessage('system', `🔄 Starting fresh Figma import from: ${figmaUrl}`, 'info');
+
                 // Send Figma import request
                 const message = `Please import and recreate the design from this Figma file: ${figmaUrl}`;
                 this.sendPrompt(message);
             });
+        }
+    }
+
+    resetFigmaModal() {
+        // Reset URL input
+        document.getElementById('figma-url-modal').value = '';
+        
+        // Clear stored HTML
+        this.currentFigmaHtml = null;
+        
+        // Hide preview section
+        const previewSection = document.getElementById('html-preview-section');
+        if (previewSection) {
+            previewSection.style.display = 'none';
+        }
+        
+        // Reset preview code
+        const previewCode = document.getElementById('html-preview-code');
+        if (previewCode) {
+            previewCode.textContent = '';
+        }
+        
+        // Hide import button, show preview button
+        const importBtn = document.getElementById('import-figma-modal-btn');
+        const previewBtn = document.getElementById('preview-figma-btn');
+        if (importBtn) importBtn.style.display = 'none';
+        if (previewBtn) previewBtn.disabled = false;
+        
+        // Reset status
+        const previewStatus = document.getElementById('preview-status');
+        if (previewStatus) {
+            previewStatus.textContent = '';
+            previewStatus.className = 'preview-status';
+        }
+    }
+
+    async previewFigmaHtml(figmaUrl) {
+        const previewSection = document.getElementById('html-preview-section');
+        const previewStatus = document.getElementById('preview-status');
+        const previewCode = document.getElementById('html-preview-code');
+        const importBtn = document.getElementById('import-figma-modal-btn');
+        const previewBtn = document.getElementById('preview-figma-btn');
+
+        // Show preview section and update status
+        previewSection.style.display = 'block';
+        previewStatus.textContent = 'Loading...';
+        previewStatus.className = 'preview-status loading';
+        previewBtn.disabled = true;
+        previewCode.textContent = '';
+
+        try {
+            // Call the backend API to convert Figma to HTML
+            const response = await fetch('/api/figma-to-html', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ figma_url: figmaUrl })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to convert: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            // Display HTML code in pre tag
+            const htmlContent = data.html;
+            previewCode.textContent = htmlContent;
+
+            // Store HTML for copying
+            this.currentFigmaHtml = htmlContent;
+
+            previewStatus.textContent = `✓ HTML generated (${data.file_name})`;
+            previewStatus.className = 'preview-status success';
+
+            // Show import button and enable preview button
+            importBtn.style.display = 'inline-block';
+            previewBtn.disabled = false;
+
+            this.showNotification('HTML code generated successfully!');
+
+        } catch (error) {
+            console.error('Preview error:', error);
+            previewStatus.textContent = `✗ Error: ${error.message}`;
+            previewStatus.className = 'preview-status error';
+            previewBtn.disabled = false;
+            previewCode.textContent = `Error: ${error.message}`;
+            this.showError(`Failed to preview: ${error.message}`);
+        }
+    }
+
+    copyHtmlToClipboard() {
+        console.log('copyHtmlToClipboard called');
+        console.log('currentFigmaHtml:', this.currentFigmaHtml ? 'exists' : 'null');
+        
+        const copyBtn = document.getElementById('copy-html-btn');
+        
+        if (!this.currentFigmaHtml) {
+            console.error('No HTML to copy');
+            this.showError('No HTML to copy');
+            return;
+        }
+
+        console.log('Attempting to copy to clipboard...');
+        
+        // Check if clipboard API is available
+        if (!navigator.clipboard) {
+            console.warn('Clipboard API not available, using fallback');
+            this.copyToClipboardFallback(this.currentFigmaHtml, copyBtn);
+            return;
+        }
+        
+        navigator.clipboard.writeText(this.currentFigmaHtml).then(() => {
+            console.log('Copy successful');
+            // Update button to show success
+            const originalText = copyBtn.innerHTML;
+            copyBtn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M13.3333 4L6 11.3333L2.66667 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Copied!
+            `;
+            copyBtn.className = 'btn-copy copied';
+
+            // Reset after 2 seconds
+            setTimeout(() => {
+                copyBtn.innerHTML = originalText;
+                copyBtn.className = 'btn-copy';
+            }, 2000);
+
+            this.showNotification('HTML copied to clipboard!');
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+            // Try fallback method
+            this.copyToClipboardFallback(this.currentFigmaHtml, copyBtn);
+        });
+    }
+
+    copyToClipboardFallback(text, copyBtn) {
+        try {
+            // Create a temporary textarea
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            
+            // Execute copy command
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textarea);
+            
+            if (successful) {
+                console.log('Fallback copy successful');
+                // Update button to show success
+                const originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M13.3333 4L6 11.3333L2.66667 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Copied!
+                `;
+                copyBtn.className = 'btn-copy copied';
+
+                // Reset after 2 seconds
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalText;
+                    copyBtn.className = 'btn-copy';
+                }, 2000);
+
+                this.showNotification('HTML copied to clipboard!');
+            } else {
+                throw new Error('Copy command failed');
+            }
+        } catch (err) {
+            console.error('Fallback copy failed:', err);
+            this.showError('Failed to copy HTML to clipboard. Please copy manually from the preview.');
         }
     }
 

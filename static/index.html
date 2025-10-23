@@ -74,7 +74,7 @@
 
     <!-- Figma Import Modal -->
     <div id="figma-modal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content modal-large">
             <div class="modal-header">
                 <h2>Import from Figma</h2>
                 <button class="modal-close" id="close-modal-btn">&times;</button>
@@ -91,12 +91,36 @@
                         placeholder="https://www.figma.com/design/... or /file/..."
                         class="modal-input"
                     />
-                    <p class="input-hint">Example: https://www.figma.com/design/ABC123/My-Design</p>
+                    <p class="input-hint">
+                        <strong>Tip:</strong> To import a specific frame instead of the entire file, right-click the frame in Figma and select "Copy link". 
+                        The URL will include <code>?node-id=...</code><br>
+                        Example: https://www.figma.com/design/ABC123/My-Design?node-id=1-2
+                    </p>
+                </div>
+                
+                <!-- HTML Preview Section -->
+                <div id="html-preview-section" class="preview-section" style="display: none;">
+                    <div class="preview-header">
+                        <h3>Generated HTML Code</h3>
+                        <div class="preview-actions">
+                            <span id="preview-status" class="preview-status"></span>
+                            <button id="copy-html-btn" class="btn-copy" title="Copy to clipboard">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M5.33333 3.33333V2C5.33333 1.63333 5.63333 1.33333 6 1.33333H13.3333C13.7 1.33333 14 1.63333 14 2V10C14 10.3667 13.7 10.6667 13.3333 10.6667H12V12C12 12.7333 11.4 13.3333 10.6667 13.3333H2.66667C1.93333 13.3333 1.33333 12.7333 1.33333 12V5.33333C1.33333 4.6 1.93333 4 2.66667 4H4V3.33333H5.33333ZM5.33333 5.33333H2.66667V12H10.6667V5.33333H5.33333Z" fill="currentColor"/>
+                                </svg>
+                                Copy
+                            </button>
+                        </div>
+                    </div>
+                    <div class="preview-container">
+                        <pre id="html-preview-code" class="preview-code"></pre>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button id="cancel-figma-btn" class="btn-secondary">Cancel</button>
-                <button id="import-figma-modal-btn" class="btn-primary">Import Design</button>
+                <button id="preview-figma-btn" class="btn-secondary">Preview HTML</button>
+                <button id="import-figma-modal-btn" class="btn-primary" style="display: none;">Generate Template</button>
             </div>
         </div>
     </div>
