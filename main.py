@@ -169,23 +169,24 @@ async def websocket_endpoint(websocket: WebSocket):
                 )
 
                 try:
-                    async with agent.run_stream(
-                        user_message,
-                        deps=AgentDeps(uid=settings.beefree_uid, websocket=websocket),
-                    ) as result:
-                        async for text in result.stream_text(debounce_by=0.01):
-                            await websocket.send_text(
-                                json.dumps({"type": "stream", "content": text})
-                            )
+                    with agent.sequential_tool_calls():
+                        async with agent.run_stream(
+                            user_message,
+                            deps=AgentDeps(uid=settings.beefree_uid, websocket=websocket),
+                        ) as result:
+                            async for text in result.stream_text(debounce_by=0.01):
+                                await websocket.send_text(
+                                    json.dumps({"type": "stream", "content": text})
+                                )
 
-                    await websocket.send_text(
-                        json.dumps(
-                            {
-                                "type": "complete",
-                                "message": "Request completed successfully",
-                            }
+                        await websocket.send_text(
+                            json.dumps(
+                                {
+                                    "type": "complete",
+                                    "message": "Request completed successfully",
+                                }
+                            )
                         )
-                    )
 
                 except Exception as e:
                     logger.error(f"Error processing message: {e}")
