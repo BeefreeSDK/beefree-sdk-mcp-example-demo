@@ -1,3 +1,4 @@
 .env
 .claude
 .venv
+__pycache__
