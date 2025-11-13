@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     beefree_mcp_api_key: str = Field(description="api key for mcp service")
 
     llm_model: str = Field(default="gpt-5-mini", description="Model to use")
-    openai_api_key: str
+    openai_api_key: str = Field(description="Openai api key")
 
     app_host: str = Field(default="0.0.0.0", description="Host to bind to")
     app_port: int = Field(default=8000, description="Port to bind to")

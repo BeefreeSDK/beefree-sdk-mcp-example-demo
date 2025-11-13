@@ -13,7 +13,6 @@ from pydantic_ai import Agent, RunContext
 from pydantic_ai.mcp import MCPServerStreamableHTTP, CallToolFunc, ToolResult
 from pydantic_ai.models.openai import (\
     OpenAIChatModel,
-    OpenAIModelSettings,
     OpenAIResponsesModelSettings,
 )
 from pydantic_ai.providers.openai import OpenAIProvider
@@ -81,10 +80,7 @@ agent = Agent(
     model=OpenAIChatModel(
         model_name=settings.llm_model,
         provider=OpenAIProvider(api_key=settings.openai_api_key),
-    ),
-    model_settings=OpenAIModelSettings(
-        openai_reasoning_effort="minimal",
-        responses_settings=OpenAIResponsesModelSettings(openai_text_verbosity="low"),
+        settings=OpenAIResponsesModelSettings(openai_reasoning_effort="minimal")
     ),
     toolsets=[beefree_server],
     tools=[send_progress_update],
