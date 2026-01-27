@@ -84,5 +84,6 @@ The application will be available at `http://localhost:8000`
 
 **More resources:**
 
+- MCP tool list for this demo: `mcp-tool-list.md`
 - What's a [Model Context Protocol](https://modelcontextprotocol.io/)?  
 - [uv Documentation](https://docs.astral.sh/uv/)
