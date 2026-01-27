@@ -6,6 +6,7 @@ class BeefreeEmailApp {
         this.currentMessageId = null;
         this.isFirstStreamChunk = false;
         this.previousContentLength = 0;
+        this.currentMessageContent = '';
         this.isGenerating = false;
         this.init();
     }
@@ -137,6 +138,7 @@ class BeefreeEmailApp {
                 this.currentMessageId = null;
                 this.isFirstStreamChunk = true;
                 this.previousContentLength = 0; // Reset content tracking for new message
+                this.currentMessageContent = '';
                 this.setGeneratingState(true);
                 break;
 
@@ -149,7 +151,23 @@ class BeefreeEmailApp {
                 }
                 // Append only the new content to the existing message
                 if (this.currentMessageId) {
-                    this.appendToMessage(this.currentMessageId, data.content);
+                    const incoming = data.content || '';
+                    if (!this.currentMessageContent) {
+                        this.currentMessageContent = incoming;
+                    } else if (incoming.startsWith(this.currentMessageContent)) {
+                        // Incoming is a full snapshot that includes everything so far.
+                        this.currentMessageContent = incoming;
+                    } else if (this.currentMessageContent.startsWith(incoming)) {
+                        // Incoming is a shorter partial; keep the longer content.
+                        // This can happen with out-of-order chunks.
+                    } else if (incoming.includes(this.currentMessageContent)) {
+                        // Incoming contains current content somewhere; treat as full snapshot.
+                        this.currentMessageContent = incoming;
+                    } else {
+                        // Fallback: treat as incremental chunk.
+                        this.currentMessageContent += incoming;
+                    }
+                    this.appendToMessage(this.currentMessageId, this.currentMessageContent);
                 }
                 break;
 
@@ -161,11 +179,14 @@ class BeefreeEmailApp {
             case 'complete':
                 // Mark the streaming message as complete
                 if (this.currentMessageId) {
+                    // Ensure final render uses full content for proper Markdown
+                    this.appendToMessage(this.currentMessageId, this.currentMessageContent);
                     this.finalizeMessage(this.currentMessageId);
                 }
                 this.currentMessageId = null;
                 this.isFirstStreamChunk = false;
                 this.previousContentLength = 0;
+                this.currentMessageContent = '';
                 this.setGeneratingState(false);
                 break;
 
@@ -174,6 +195,7 @@ class BeefreeEmailApp {
                 this.currentMessageId = null;
                 this.isFirstStreamChunk = false;
                 this.previousContentLength = 0;
+                this.currentMessageContent = '';
                 this.setGeneratingState(false);
                 break;
 
@@ -265,8 +287,9 @@ class BeefreeEmailApp {
         // Hide empty state
         this.hideEmptyState();
 
+        const normalizedPrompt = String(prompt).replace(/\\n/g, '\n');
         // Set the prompt in the input field
-        document.getElementById('chat-input').value = prompt;
+        document.getElementById('chat-input').value = normalizedPrompt;
 
         // Send the message
         this.sendMessage();
@@ -301,14 +324,9 @@ class BeefreeEmailApp {
         if (messageDiv) {
             const contentDiv = messageDiv.querySelector('.message-content');
             if (contentDiv) {
-                // Extract only the new portion of content that we haven't displayed yet
-                const newContent = fullContent.substring(this.previousContentLength);
-
-                // Only append if there's actually new content
-                if (newContent) {
-                    contentDiv.innerHTML += this.formatMessage(newContent);
-                    this.previousContentLength = fullContent.length;
-                }
+                // Re-render the full message to avoid broken Markdown chunks
+                contentDiv.innerHTML = this.formatMessage(fullContent);
+                this.previousContentLength = fullContent.length;
 
                 // Scroll to bottom
                 const messagesDiv = document.getElementById('chat-messages');
@@ -328,8 +346,141 @@ class BeefreeEmailApp {
 
 
     formatMessage(message) {
-        // Convert line breaks and escape HTML
-        return this.escapeHtml(message).replace(/\n/g, '<br>');
+        const rawText = String(message ?? '');
+        const escaped = this.escapeHtml(rawText);
+        return this.renderMarkdown(escaped);
+    }
+
+    renderMarkdown(escapedText) {
+        const lines = escapedText.split('\n');
+        let html = '';
+        let inCodeBlock = false;
+        let codeLines = [];
+        let listType = null;
+        let listItems = [];
+        let paragraphLines = [];
+
+        const flushParagraph = () => {
+            if (!paragraphLines.length) return;
+            let paragraphHtml = '';
+            for (const line of paragraphLines) {
+                const hasHardBreak = /\s{2}$/.test(line);
+                const cleanedLine = line.replace(/\s+$/, '');
+                const formattedLine = this.formatInline(cleanedLine);
+                if (!paragraphHtml) {
+                    paragraphHtml = formattedLine;
+                } else if (hasHardBreak) {
+                    paragraphHtml += `<br>${formattedLine}`;
+                } else {
+                    paragraphHtml += ` ${formattedLine}`;
+                }
+            }
+            html += `<p>${paragraphHtml}</p>`;
+            paragraphLines = [];
+        };
+
+        const flushList = () => {
+            if (!listType || !listItems.length) return;
+            const itemsHtml = listItems
+                .map(item => `<li>${this.formatInline(item)}</li>`)
+                .join('');
+            html += `<${listType}>${itemsHtml}</${listType}>`;
+            listType = null;
+            listItems = [];
+        };
+
+        const flushCode = () => {
+            if (!codeLines.length) return;
+            html += `<pre><code>${codeLines.join('\n')}</code></pre>`;
+            codeLines = [];
+        };
+
+        for (const line of lines) {
+            const fenceMatch = line.match(/^```/);
+            if (fenceMatch) {
+                if (inCodeBlock) {
+                    inCodeBlock = false;
+                    flushCode();
+                } else {
+                    flushParagraph();
+                    flushList();
+                    inCodeBlock = true;
+                }
+                continue;
+            }
+
+            if (inCodeBlock) {
+                codeLines.push(line);
+                continue;
+            }
+
+            const headingMatch = line.match(/^(#{1,3})\s+(.*)$/);
+            if (headingMatch) {
+                flushParagraph();
+                flushList();
+                const level = headingMatch[1].length;
+                html += `<h${level}>${this.formatInline(headingMatch[2])}</h${level}>`;
+                continue;
+            }
+
+            const unorderedMatch = line.match(/^[-*•]\s+(.*)$/);
+            const orderedMatch = line.match(/^\d+[.)]\s+(.*)$/);
+            if (unorderedMatch || orderedMatch) {
+                flushParagraph();
+                const newType = orderedMatch ? 'ol' : 'ul';
+                if (listType && listType !== newType) {
+                    flushList();
+                }
+                listType = newType;
+                listItems.push((unorderedMatch || orderedMatch)[1]);
+                continue;
+            }
+
+            if (line.trim() === '') {
+                flushParagraph();
+                flushList();
+                continue;
+            }
+
+            paragraphLines.push(line);
+        }
+
+        if (inCodeBlock) {
+            inCodeBlock = false;
+            flushCode();
+        }
+        flushParagraph();
+        flushList();
+
+        return html;
+    }
+
+    formatInline(text) {
+        const parts = text.split(/(`[^`]+`)/g);
+        return parts.map(part => {
+            if (part.startsWith('`') && part.endsWith('`')) {
+                return `<code>${part.slice(1, -1)}</code>`;
+            }
+            return this.formatLinksAndEmphasis(part);
+        }).join('');
+    }
+
+    formatLinksAndEmphasis(text) {
+        const withLinks = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => {
+            const safeUrl = this.sanitizeUrl(url);
+            if (!safeUrl) return label;
+            return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+        });
+        const withBold = withLinks.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        return withBold.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    }
+
+    sanitizeUrl(url) {
+        const trimmed = String(url || '').trim();
+        if (/^https?:\/\/|^mailto:/i.test(trimmed)) {
+            return trimmed.replace(/"/g, '%22');
+        }
+        return null;
     }
 
     downloadFile(content, filename, mimeType) {
