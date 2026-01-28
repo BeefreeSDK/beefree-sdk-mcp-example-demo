@@ -91,7 +91,7 @@ The application will be available at `http://localhost:8000`
 **About the Beefree SDK**
 
 - [Beefree SDK Documentation](https://docs.beefree.io/)  
-- Beefree SDK MCP Server Documentation
+- [Beefree SDK MCP Server Documentation](https://docs.beefree.io/beefree-sdk/early-access/beefree-sdk-mcp-server-beta)
 
 **About PydanticAI:**
 
