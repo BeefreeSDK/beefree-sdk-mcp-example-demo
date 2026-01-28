@@ -8,6 +8,8 @@ class BeefreeEmailApp {
         this.previousContentLength = 0;
         this.currentMessageContent = '';
         this.isGenerating = false;
+        this.editorStateTimer = null;
+        this.lastEditorStateHash = '';
         this.init();
     }
 
@@ -72,6 +74,7 @@ class BeefreeEmailApp {
                 ],
                 onChange: (jsonFile, response) => {
                     console.log("Template changed:", jsonFile);
+                    this.queueEditorState(jsonFile);
                 },
                 onSave: (jsonFile, htmlFile) => {
                     console.log("Template saved:", jsonFile);
@@ -252,6 +255,23 @@ class BeefreeEmailApp {
 
         // Clear input
         input.value = '';
+    }
+
+    queueEditorState(jsonFile) {
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+        // Avoid spamming: send a debounced snapshot and skip if unchanged.
+        const snapshot = JSON.stringify(jsonFile);
+        if (snapshot === this.lastEditorStateHash) return;
+        this.lastEditorStateHash = snapshot;
+        if (this.editorStateTimer) {
+            clearTimeout(this.editorStateTimer);
+        }
+        this.editorStateTimer = setTimeout(() => {
+            this.ws.send(JSON.stringify({
+                type: 'editor_state',
+                content: jsonFile
+            }));
+        }, 800);
     }
 
     setGeneratingState(generating) {

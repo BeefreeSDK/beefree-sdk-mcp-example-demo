@@ -20,7 +20,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "pydantic-ai-slim[mcp,openai]>=1.0.8",
+    "pydantic-ai-slim[mcp,google,openai]>=1.0.8",
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
     "websockets>=13.0",
