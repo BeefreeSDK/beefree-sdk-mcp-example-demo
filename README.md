@@ -46,7 +46,7 @@ BEEFREE_CLIENT_ID=your_beefree_client_id
 BEEFREE_CLIENT_SECRET=your_beefree_client_secret
 BEEFREE_MCP_API_KEY=your_beefree_mcp_api_key
 ANTHROPIC_API_KEY=your_anthropic_api_key
-LLM_MODEL=claude-opus-4.5
+LLM_MODEL=claude-opus-4-5
 ```
 
 OpenAI:
