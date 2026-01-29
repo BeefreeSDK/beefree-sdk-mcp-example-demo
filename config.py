@@ -16,10 +16,11 @@ class Settings(BaseSettings):
     )
     beefree_mcp_api_key: str = Field(description="api key for mcp service")
 
-    ai_provider: str = Field(description="Model provider: gemini or openai")
+    ai_provider: str = Field(description="Model provider: gemini, openai, or anthropic")
     llm_model: str = Field(description="Model to use")
     gemini_api_key: str | None = Field(default=None, description="Gemini api key")
     openai_api_key: str | None = Field(default=None, description="OpenAI api key")
+    anthropic_api_key: str | None = Field(default=None, description="Anthropic api key")
 
     app_host: str = Field(default="0.0.0.0", description="Host to bind to")
     app_port: int = Field(default=8000, description="Port to bind to")
@@ -36,7 +37,9 @@ try:
 except ValidationError as exc:
     missing = {err["loc"][0] for err in exc.errors()}
     if "ai_provider" in missing:
-        raise SystemExit("Missing required env var: AI_PROVIDER (gemini or openai)") from exc
+        raise SystemExit(
+            "Missing required env var: AI_PROVIDER (gemini, openai, or anthropic)"
+        ) from exc
     if "llm_model" in missing:
         raise SystemExit("Missing required env var: LLM_MODEL") from exc
     raise

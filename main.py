@@ -11,8 +11,10 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic_ai import Agent, RunContext, UsageLimits
 from pydantic_ai.mcp import MCPServerStreamableHTTP, CallToolFunc, ToolResult
+from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.models.google import GoogleModel, GoogleModelSettings
 from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.anthropic import AnthropicProvider
 from pydantic_ai.providers.google import GoogleProvider
 from pydantic_ai.providers.openai import OpenAIProvider
 
@@ -90,7 +92,7 @@ DEFAULT_THINKING_BUDGET = 256
 
 def build_agent() -> Agent:
     if not settings.ai_provider or not settings.ai_provider.strip():
-        raise ValueError("AI_PROVIDER is required (gemini or openai)")
+        raise ValueError("AI_PROVIDER is required (gemini, openai, or anthropic)")
     if not settings.llm_model or not settings.llm_model.strip():
         raise ValueError("LLM_MODEL is required")
     provider = settings.ai_provider.strip().lower()
@@ -112,8 +114,15 @@ def build_agent() -> Agent:
             model_name=settings.llm_model,
             provider=OpenAIProvider(api_key=settings.openai_api_key),
         )
+    elif provider == "anthropic":
+        if not settings.anthropic_api_key:
+            raise ValueError("ANTHROPIC_API_KEY is required when AI_PROVIDER=anthropic")
+        model = AnthropicModel(
+            model_name=settings.llm_model,
+            provider=AnthropicProvider(api_key=settings.anthropic_api_key),
+        )
     else:
-        raise ValueError("AI_PROVIDER must be 'gemini' or 'openai'")
+        raise ValueError("AI_PROVIDER must be 'gemini', 'openai', or 'anthropic'")
 
     return Agent(
         model=model,
@@ -287,6 +296,9 @@ async def websocket_endpoint(websocket: WebSocket):
                         json.dumps({"type": "error", "message": f"Error: {str(e)}"})
                     )
 
+            elif message_data["type"] == "reset":
+                message_history = []
+                editor_state_snapshot = None
             elif message_data["type"] == "editor_state":
                 logger.info("Received editor state update")
                 try:
