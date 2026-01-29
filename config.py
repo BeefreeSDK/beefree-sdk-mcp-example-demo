@@ -1,6 +1,6 @@
 import uuid
 
-from pydantic import Field
+from pydantic import Field, ValidationError
 from pydantic_settings import BaseSettings
 
 
@@ -16,8 +16,10 @@ class Settings(BaseSettings):
     )
     beefree_mcp_api_key: str = Field(description="api key for mcp service")
 
-    llm_model: str = Field(default="gpt-5-mini", description="Model to use")
-    openai_api_key: str = Field(description="Openai api key")
+    ai_provider: str = Field(description="Model provider: gemini or openai")
+    llm_model: str = Field(description="Model to use")
+    gemini_api_key: str | None = Field(default=None, description="Gemini api key")
+    openai_api_key: str | None = Field(default=None, description="OpenAI api key")
 
     app_host: str = Field(default="0.0.0.0", description="Host to bind to")
     app_port: int = Field(default=8000, description="Port to bind to")
@@ -26,6 +28,15 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = False
+        extra = "ignore"
 
 
-settings = Settings()
+try:
+    settings = Settings()
+except ValidationError as exc:
+    missing = {err["loc"][0] for err in exc.errors()}
+    if "ai_provider" in missing:
+        raise SystemExit("Missing required env var: AI_PROVIDER (gemini or openai)") from exc
+    if "llm_model" in missing:
+        raise SystemExit("Missing required env var: LLM_MODEL") from exc
+    raise

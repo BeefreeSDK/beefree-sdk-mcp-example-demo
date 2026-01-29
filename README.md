@@ -2,7 +2,7 @@
 
 Are you exploring agentic email design? We believe the future of content design means having AI agents and humans work seamlessly together to create content — and this simple demo app shows you how to create a design experience that does just that. 
 
-It connects the [Beefree SDK](https://developers.beefree.io/) (the most intuitive drag-and-drop email editor in the market) with a [PydanticAI agent](https://ai.pydantic.dev/) using the Model Context Protocol (MCP). 
+It connects the [Beefree SDK](https://developers.beefree.io/) (the most intuitive drag-and-drop email editor in the market) with a [PydanticAI agent](https://ai.pydantic.dev/) using the Model Context Protocol (MCP), and supports both Gemini and OpenAI as the LLM provider.
 
 **Here's what you can achieve:** 
 
@@ -20,7 +20,7 @@ It connects the [Beefree SDK](https://developers.beefree.io/) (the most intuitiv
 - Python 3.13+  
 - [uv](https://docs.astral.sh/uv/) for package management (recommended)  
 - Beefree SDK account (If you already have an account, you can [get your credentials here](https://developers.beefree.io/). If you're new to Beefree SDK, you can [sign up for a free account](https://developers.beefree.io/signup).)  
-- OpenAI API key
+- Gemini or OpenAI API key
 - Beta access. Learn how to request access to the beta in our [Beefree SDK MCP Server (Beta) documentation](https://docs.beefree.io/beefree-sdk/early-access/beefree-sdk-mcp-server-beta).
 
 ## Quick start
@@ -38,19 +38,26 @@ uv sync
 
 ### 2. Configure environment
 
-Copy the example environment file and add your credentials:
+Create a `.env` file and add your credentials. Pick the example that matches your provider.
 
-```shell
-cp .env.example .env
+Gemini:
 ```
-
-Edit `.env` with your credentials:
-
-```
+AI_PROVIDER=gemini
 BEEFREE_CLIENT_ID=your_beefree_client_id
 BEEFREE_CLIENT_SECRET=your_beefree_client_secret
 BEEFREE_MCP_API_KEY=your_beefree_mcp_api_key
-OPENAI_API_KEY=your_llm_api_key
+GEMINI_API_KEY=your_gemini_api_key
+LLM_MODEL=gemini-2.5-pro
+```
+
+OpenAI:
+```
+AI_PROVIDER=openai
+BEEFREE_CLIENT_ID=your_beefree_client_id
+BEEFREE_CLIENT_SECRET=your_beefree_client_secret
+BEEFREE_MCP_API_KEY=your_beefree_mcp_api_key
+OPENAI_API_KEY=your_openai_api_key
+LLM_MODEL=gpt-5.2
 ```
 
 ### 3. Run the application
@@ -64,10 +71,10 @@ The application will be available at `http://localhost:8000`
 
 ## How it works
 
-1. **User Input**: The user types a natural language request in the chat interface, such as a detailed description of the type of email campaign they'd like to draft.  
-2. **Streaming Processing**: PydanticAI agent processes using `agent.run_stream()`  
+1. **User Input**: The user types a natural language request in the chat interface.  
+2. **Agent Run**: The PydanticAI agent runs with conversation history and editor context.  
 3. **MCP Execution**: Direct HTTP calls to Beefree's MCP server modify the email template.  
-4. **Real-time Updates**: Streaming responses show the AI's thought process.  
+4. **Progress Updates**: The UI shows step-by-step progress messages.  
 5. **Editor Integration**: Changes are reflected in the Beefree editor.
 
 ## Resources

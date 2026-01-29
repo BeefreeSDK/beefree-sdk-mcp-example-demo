@@ -9,12 +9,11 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic_ai import Agent, RunContext
+from pydantic_ai import Agent, RunContext, UsageLimits
 from pydantic_ai.mcp import MCPServerStreamableHTTP, CallToolFunc, ToolResult
-from pydantic_ai.models.openai import (
-    OpenAIChatModel,
-    OpenAIResponsesModelSettings,
-)
+from pydantic_ai.models.google import GoogleModel, GoogleModelSettings
+from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.google import GoogleProvider
 from pydantic_ai.providers.openai import OpenAIProvider
 
 from config import settings
@@ -27,8 +26,6 @@ logger = logging.getLogger(__name__)
 class AgentDeps:
     uid: str
     websocket: Optional[WebSocket] = None
-    tool_calls: int = 0
-    tool_call_limit: int = 45
 
 
 async def process_tool_call(
@@ -38,22 +35,14 @@ async def process_tool_call(
     tool_args: dict[str, Any],
 ) -> ToolResult:
     try:
-        ctx.deps.tool_calls += 1
-        if ctx.deps.tool_calls > ctx.deps.tool_call_limit:
-            logger.warning(
-                "Tool call limit reached (%s). Skipping tool: %s",
-                ctx.deps.tool_call_limit,
-                name,
-            )
-            return {
-                "error": "tool_call_limit_reached",
-                "tool": name,
-            }
-        return await call_tool(
+        logger.info("Calling tool: %s", name)
+        result = await call_tool(
             name,
             tool_args,
             {"x-bee-uid": ctx.deps.uid},
         )
+        logger.info("Tool call completed: %s", name)
+        return result
     except Exception as e:
         logger.error("Tool call failed: %s", name, exc_info=True)
         return {"error": str(e), "tool": name}
@@ -65,6 +54,9 @@ beefree_server = MCPServerStreamableHTTP(
         "Authorization": f"Bearer {settings.beefree_mcp_api_key}",
     },
     process_tool_call=process_tool_call,
+    timeout=10,
+    read_timeout=60,
+    max_retries=0,
 )
 
 
@@ -93,15 +85,42 @@ async def send_progress_update(ctx: RunContext[AgentDeps], message: str) -> str:
         return "No WebSocket connection available"
 
 
-agent = Agent(
-    model=OpenAIChatModel(
-        model_name=settings.llm_model,
-        provider=OpenAIProvider(api_key=settings.openai_api_key),
-        settings=OpenAIResponsesModelSettings(openai_reasoning_effort="low")    ),
-    toolsets=[beefree_server],
-    tools=[send_progress_update],
-    deps_type=AgentDeps,
-    system_prompt="""You are an expert email design and copy assistant powered by the Beefree SDK. Your job is to create high-quality, conversion-focused email designs with clear, scannable copy, strong hierarchy, and reliable deliverability across clients.
+DEFAULT_THINKING_BUDGET = 256
+
+
+def build_agent() -> Agent:
+    if not settings.ai_provider or not settings.ai_provider.strip():
+        raise ValueError("AI_PROVIDER is required (gemini or openai)")
+    if not settings.llm_model or not settings.llm_model.strip():
+        raise ValueError("LLM_MODEL is required")
+    provider = settings.ai_provider.strip().lower()
+    if provider == "gemini":
+        if not settings.gemini_api_key:
+            raise ValueError("GEMINI_API_KEY is required when AI_PROVIDER=gemini")
+        model_settings = GoogleModelSettings(
+            google_thinking_config={"thinking_budget": DEFAULT_THINKING_BUDGET}
+        )
+        model = GoogleModel(
+            model_name=settings.llm_model,
+            provider=GoogleProvider(api_key=settings.gemini_api_key),
+            settings=model_settings,
+        )
+    elif provider == "openai":
+        if not settings.openai_api_key:
+            raise ValueError("OPENAI_API_KEY is required when AI_PROVIDER=openai")
+        model = OpenAIChatModel(
+            model_name=settings.llm_model,
+            provider=OpenAIProvider(api_key=settings.openai_api_key),
+        )
+    else:
+        raise ValueError("AI_PROVIDER must be 'gemini' or 'openai'")
+
+    return Agent(
+        model=model,
+        toolsets=[beefree_server],
+        tools=[send_progress_update],
+        deps_type=AgentDeps,
+        system_prompt="""You are an expert email design and copy assistant powered by the Beefree SDK. Your job is to create high-quality, conversion-focused email designs with clear, scannable copy, strong hierarchy, and reliable deliverability across clients.
 
 ## Core Principles (Quality First)
 - **Clarity**: One primary message and one primary CTA per email.
@@ -176,7 +195,10 @@ Confirm the selected element type before making changes.
   and report the limitation.
 
 Remember: prioritize the recipient experience and the sender’s goals. Build emails that look great, read well, and perform.""",
-)
+    )
+
+
+agent = build_agent()
 
 
 app = FastAPI(
@@ -198,6 +220,8 @@ async def root():
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     logger.info("WebSocket connection established")
+    message_history = []
+    editor_state_snapshot = None
 
     if not agent:
         await websocket.send_text(
@@ -228,14 +252,25 @@ async def websocket_endpoint(websocket: WebSocket):
                 )
 
                 try:
-                    async with agent.run_stream(
+                    extra_instructions = None
+                    if editor_state_snapshot:
+                        extra_instructions = (
+                            "Current editor state (truncated JSON):\n"
+                            f"{editor_state_snapshot}"
+                        )
+                    result = await agent.run(
                         user_message,
                         deps=AgentDeps(uid=settings.beefree_uid, websocket=websocket),
-                    ) as result:
-                        async for text in result.stream_text(debounce_by=0.01):
-                            await websocket.send_text(
-                                json.dumps({"type": "stream", "content": text})
-                            )
+                        message_history=message_history,
+                        instructions=extra_instructions,
+                        usage_limits=UsageLimits(request_limit=None),
+                    )
+
+                    output_text = result.output or "✅ Done. Check the editor for updates."
+                    await websocket.send_text(
+                        json.dumps({"type": "stream", "content": output_text})
+                    )
+                    message_history = result.all_messages()
 
                     await websocket.send_text(
                         json.dumps(
@@ -254,6 +289,10 @@ async def websocket_endpoint(websocket: WebSocket):
 
             elif message_data["type"] == "editor_state":
                 logger.info("Received editor state update")
+                try:
+                    editor_state_snapshot = json.dumps(message_data.get("content", {}))[:4000]
+                except TypeError:
+                    editor_state_snapshot = None
 
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected")
