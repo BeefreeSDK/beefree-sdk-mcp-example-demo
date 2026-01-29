@@ -296,6 +296,9 @@ async def websocket_endpoint(websocket: WebSocket):
                         json.dumps({"type": "error", "message": f"Error: {str(e)}"})
                     )
 
+            elif message_data["type"] == "reset":
+                message_history = []
+                editor_state_snapshot = None
             elif message_data["type"] == "editor_state":
                 logger.info("Received editor state update")
                 try:

@@ -116,6 +116,7 @@ class BeefreeEmailApp {
 
         this.ws.onopen = () => {
             console.log('WebSocket connected');
+            this.ws.send(JSON.stringify({ type: 'reset' }));
         };
 
         this.ws.onmessage = (event) => {
